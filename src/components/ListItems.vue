@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { PlusCircleIcon, Settings2 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { Dialog, DialogScrollContent, DialogTrigger } from '@/components/ui/dialog'
+import { ref, shallowRef } from 'vue'
 import { Button } from '@/components/ui/button'
 
 interface Props {
@@ -8,20 +9,25 @@ interface Props {
   items: any[] // Replace 'any' with your specific item type
   addButtonLabel?: string
   showSettings?: boolean
+  dialogClass?: string
+  formComponent: any // Replace 'any' with the actual component type if possible
 }
 
 const props = withDefaults(defineProps<Props>(), {
   addButtonLabel: 'Add',
   showSettings: true
 })
+const formComponent = shallowRef(props.formComponent)
 
 const emit = defineEmits<{
-  (e: 'add'): void
+  (e: 'add', component: any): void
   (e: 'settings'): void
   (e: 'select', item: any): void
 }>()
 
 const selectedItem = ref<any>(null)
+
+const isDialogOpen = ref(false)
 </script>
 
 <template>
@@ -37,11 +43,19 @@ const selectedItem = ref<any>(null)
             @click="emit('settings')" 
           />
 
-          <Button class="text-sm" @click="emit('add')">
+            <Dialog v-model:open="isDialogOpen">
+            <DialogTrigger as-child>
+            <Button class="text-sm" @click="emit('add', formComponent)">
             <PlusCircleIcon />
             {{ addButtonLabel }} {{ title }}
-          </Button> 
-        </div>
+            </Button>
+            </DialogTrigger>
+            <DialogScrollContent :class="dialogClass">
+              <component :is="formComponent" />
+            </DialogScrollContent>
+          </Dialog>
+          </div>
+ 
         
         <!-- Items List -->
         <div class="overflow-y-auto divide-y">
