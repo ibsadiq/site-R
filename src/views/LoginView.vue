@@ -96,7 +96,7 @@ async function handleLogin() {
         height="1080"
         class="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
       > -->
-      <div class="flex h-full bg-green-50 items-center justify-center">
+      <div class="flex h-full bg-muted items-center justify-center">
         
       </div>
     </div>

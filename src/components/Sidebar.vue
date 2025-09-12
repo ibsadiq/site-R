@@ -70,15 +70,11 @@ const data = {
         
         {
           title: 'Sites',
-          url: '#',
+          url: '/sites',
         },
         {
           title: 'Zones',
-          url: '#',
-        },
-        {
-          title: 'Spaces',
-          url: '#',
+          url: '/zones',
         },
       ],
     },
@@ -89,7 +85,7 @@ const data = {
       items: [
         {
           title: 'Systems',
-          url: '#',
+          url: '/systems',
         },
         {
           title: 'Models',
@@ -147,11 +143,7 @@ const data = {
 <template>
   <Sidebar v-bind="props">
     <SidebarHeader>
-      <!-- <TeamSwitcher :teams="data.teams" />
 
-      <div class="flex justify-center">
-          <img src="assets/images/logo.png" alt="Logo" class="pl-4 pr-4"/>
-      </div> -->
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>

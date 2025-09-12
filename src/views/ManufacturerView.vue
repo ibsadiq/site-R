@@ -1,4 +1,20 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import {
+  Dialog, DialogScrollContent, DialogTrigger, DialogContent,
+  DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose
+} from '@/components/ui/dialog';
+import ListItems from '@/components/ListItems.vue';
+import axiosInstance from "@/utils/axiosInstance"
+import {formatDate} from '@/utils/formatDate';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+interface Manufacturer {
+  id: number;
+  name: string;
+  system_name: string;
+}
 </script>
 <template>
   <div class="flex flex-col gap-4 pt-0 bg-green-50/50">

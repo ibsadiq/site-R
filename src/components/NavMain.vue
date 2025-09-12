@@ -66,8 +66,11 @@ watch(
 function isActiveLink(link: string) {
   return route.path === link
 }
-</script>
 
+function isActiveParent(item: typeof props.items[0]) {
+  return item.items?.some(sub => route.path.startsWith(sub.url)) || false
+}
+</script>
 <template>
   <SidebarGroup>
     <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -90,9 +93,19 @@ function isActiveLink(link: string) {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <SidebarMenuSub>
-                <SidebarMenuSubItem v-for="subItem in item.items" :key="subItem.title">
-                  <SidebarMenuSubButton as-child :is-active="isActiveLink(subItem.url)">
-                    <RouterLink :to="subItem.url">
+                <SidebarMenuSubItem v-for="subItem in item.items" 
+                  :key="subItem.title"
+                  
+                >
+                  <SidebarMenuSubButton as-child>
+                    <RouterLink 
+                      :to="subItem.url"
+                      :class="{
+                        'bg-sidebar-accent text-sidebar-primary': isActiveLink(subItem.url),
+                        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground': !isActiveLink(subItem.url)
+                      }"
+
+                    >
                       <span>{{ subItem.title }}</span>
                     </RouterLink>
                   </SidebarMenuSubButton>
@@ -103,9 +116,14 @@ function isActiveLink(link: string) {
         </Collapsible>
 
         <!-- Without subitems -->
-        <SidebarMenuItem v-else>
-          <SidebarMenuButton as-child :tooltip="item.title" :is-active="isActiveLink(item.url)">
-            <RouterLink :to="item.url">
+        <SidebarMenuItem 
+          v-else
+        >
+          <SidebarMenuButton as-child :tooltip="item.title">
+            <RouterLink 
+              :to="item.url"
+              :class="{'bg-sidebar-accent text-sidebar-primary': isActiveLink(item.url)}"
+            >
               <component :is="item.icon" v-if="item.icon" />
               <span>{{ item.title }}</span>
             </RouterLink>
@@ -115,3 +133,4 @@ function isActiveLink(link: string) {
     </SidebarMenu>
   </SidebarGroup>
 </template>
+

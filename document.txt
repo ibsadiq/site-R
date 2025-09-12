@@ -1,0 +1,279 @@
+# Time MVP Technical Design Document
+
+**Version:** 0.2
+**Status:** Draft
+**Last Updated:** 10-09-2025
+**Author:** Abubakar Ibrahim
+
+---
+
+### Revision History
+
+| Version | Date         | Author           | Changes                                                                 |
+| 0.1     | 07-09-2025   | Abubakar Ibrahim | Initial draft created                                                   |
+| 0.2     | 10-09-2025   | Abubakar Ibrahim | Integrate Flutterwave as payment gateway first, add CMMS service - to be developed concurrently, Unified backend stack to Python |
+
+---
+
+## 1. Project Overview
+
+### 1.1. Purpose & Goals
+
+The purpose of this project is to develop Time Suite, an integrated CRM and CMMS platform. The primary goal of the MVP is to automate the workflow from a closed sales deal to the creation of service contracts and work orders, specifically tailored for African markets with support for local payments and offline capabilities.
+
+**Primary Objectives:**
+
+1.  Provide a unified system for sales and service teams.
+2.  Automate the conversion of a won deal into a service contract and initial work orders.
+3.  Integrate Flutterwave for payment processing.
+4.  Design an offline-first architecture for areas with unreliable connectivity.
+5.  Establish a foundation for future scalability.
+
+### 1.2. Scope (MVP)
+
+**In Scope:**
+
+1.  Lead, Contact, and Deal management (CRM)
+2.  Contract, Asset, and Work Order management (CMMS)
+3.  Event-driven integration between CRM and CMMS via `deal.closed`
+4.  User Authentication and Role-Based Access Control (RBAC)
+5.  Flutterwave payment integration for deals
+6.  Basic offline support using local storage and background sync
+7.  PWA frontend for mobile and desktop
+
+**Out of Scope:**
+
+1.  Advanced reporting and analytics dashboards
+2.  AI-powered predictions
+3.  Inventory management
+4.  Multi-language support
+5.  Advanced payment providers (beyond Flutterwave)
+
+---
+
+## 2. System Architecture
+
+### 2.1. High-Level Architecture
+
+The system follows a microservices architecture. The frontend communicates solely with an API Gateway, which routes requests to independent backend services. Services communicate asynchronously via a message broker for event-driven workflows.
+
+(Diagram would be placed here in the final document)
+
+### 2.2. Technology Stack
+
+| Component             | Technology                          | Justification                                                                         |
+| Frontend              | Next.js 14, TypeScript, Tailwind CSS | Unchanged. Ideal for PWA and developer experience.                                    |
+| API Gateway           | FastAPI                             | High performance, async capabilities, excellent for routing and auth.                 |
+| Auth Service          | Django + Django REST Framework      | Best-in-class built-in auth, security, and ORM for user data.                         |
+| CRM Service           | Django + Django REST Framework      | Excellent for complex data models and business logic.                                 |
+| CMMS Service          | Django + Django REST Framework      | Consistency with CRM; powerful ORM for managing assets/orders.                        |
+| Payments Service      | FastAPI                             | Async support is ideal for handling webhooks and external API calls.                  |
+| Sync Service          | FastAPI                             | Async support is crucial for handling multiple concurrent sync requests.              |
+| Primary Database      | PostgreSQL (single instance, multi-schema) | Unchanged. Robust and reliable.                                             |
+| Cache & Sync State    | Redis                               | Unchanged. Essential for performance and sync queues.                                 |
+| Message Broker        | RabbitMQ                            | Unchanged. Industry standard for reliable messaging.                                  |
+| DevOps                | Docker, Kubernetes, GitHub Actions  | Unchanged.                                                                            |
+
+---
+
+## 3. Detailed Component Design
+
+### 3.1. CRM Service (Django)
+
+Responsibilities: Manage leads, customers, deals, and the sales pipeline.
+
+Key Functions:
+- CRUD operations for leads, customers, and deals.
+- Manage pipeline stages.
+- Emit `deal.closed` event to RabbitMQ when a deal is won.
+
+Key Algorithm: Deal Closure
+
+// Pseudocode
+def close_deal(deal_id):
+    deal = Deal.objects.get(id=deal_id)
+    deal.status = "WON"
+    deal.save()
+
+    // Emit event to message broker
+    payload = {
+        "event_type": "deal.closed",
+        "data": {
+            "deal_id": deal.id,
+            "customer_id": deal.customer.id,
+            "service_line_items": deal.service_line_items,
+            // ... other critical fields
+        }
+    }
+    rabbitmq_publisher.publish('deal_events', payload)
+
+### 3.2. CMMS Service (Django)
+
+Responsibilities: Manage contracts, assets, and work orders.
+
+Key Functions:
+- Consume `deal.closed` events from RabbitMQ.
+- Automatically generate Contracts, Assets, and Work Orders from event data.
+- Provide CRUD APIs for work order management.
+
+### 3.3. Payments Service (FastAPI)
+
+Responsibilities: Handle all payment processing.
+
+Key Functions:
+- Initiate payments via Flutterwave API.
+- Process Flutterwave webhooks with idempotency and retry logic.
+- Update transaction statuses and notify other services.
+
+### 3.4. Sync Service (FastAPI)
+
+Responsibilities: Handle offline data synchronization.
+
+Key Functions:
+- Provide `/sync/push` and `/sync/changes` endpoints for the frontend.
+- Manage conflict resolution (last-write-wins for MVP).
+- Queue pending changes in Redis.
+
+### 3.5. API Gateway (FastAPI)
+
+Responsibilities: Single entry point, routing, rate limiting, JWT validation.
+
+Key Functions:
+- Route incoming requests to the appropriate backend service.
+- Validate JWT tokens for authentication.
+- Implement rate limiting and request logging.
+
+---
+
+## 4. Data Design
+
+### 4.1. Database Schema (PostgreSQL)
+
+auth schema:
+- users (id, email, name, hashed_password, org_id, role)
+- organizations (id, name)
+
+crm schema:
+- customers (id, name, phone, email, org_id)
+- deals (id, title, value, stage, customer_id, assigned_to_id, service_line_items JSONB)
+- activities (id, type, notes, deal_id, timestamp)
+
+cmms schema:
+- contracts (id, deal_id, customer_id, start_date, end_date, value)
+- assets (id, contract_id, name, description, serial_number, location)
+- work_orders (id, asset_id, title, description, status, priority, scheduled_date, assigned_to_id)
+
+payments schema:
+- transactions (id, deal_id, amount, status, flutterwave_reference, idempotency_key)
+
+### 4.2. Data Flow
+
+1.  CRM to CMMS: A `deal.closed` event containing `service_line_items` triggers the creation of related CMMS records.
+2.  Frontend to Sync Service: Pending changes are batched and sent to the Sync Service when online.
+3.  Payments to CRM: Payment status updates are sent via internal API calls to update deal statuses.
+
+---
+
+## 5. API/Interface Design
+
+### 5.1. REST API Standards
+
+- Base URL: /api/v1/
+- Authentication: JWT tokens passed in the Authorization: Bearer <token> header.
+- Response Format:
+    {
+      "data": { ... },
+      "error": null
+    }
+- Error Format:
+    {
+      "data": null,
+      "error": {
+        "code": "DEAL_NOT_FOUND",
+        "message": "The requested deal was not found.",
+        "details": { ... }
+      }
+    }
+
+### 5.2. Key API Endpoints
+
+| Service  | Endpoint                  | Method | Description            |
+| Auth     | /auth/login             | POST   | Authenticate user      |
+| CRM      | /crm/deals              | POST   | Create a new deal      |
+| CRM      | /crm/deals/{id}/close   | POST   | Close a deal (won)     |
+| CMMS     | /cmms/work-orders       | GET    | List work orders       |
+| Payments | /payments/initiate      | POST   | Start a payment        |
+| Sync     | /sync/push              | POST   | Push offline changes   |
+
+### 5.3. Event Interface: deal.closed
+
+Published by: CRM Service
+Consumed by: CMMS Service
+
+Payload:
+{
+  "event_type": "deal.closed",
+  "data": {
+    "deal_id": "deal_123",
+    "customer_id": "cust_456",
+    "customer_name": "ABC Enterprises",
+    "account_manager_id": "user_789",
+    "service_line_items": [
+      {
+        "name": "Annual Generator Maintenance",
+        "type": "recurring_service",
+        "asset_description": "750kVA Perkins Generator",
+        "frequency": "annual"
+      }
+    ]
+  }
+}
+
+---
+
+## 6. Requirements
+
+### 6.1. Functional Requirements
+
+| ID  | Description                                          | Priority |
+| FR1 | The system shall allow users to create and manage deals in a pipeline. | High     |
+| FR2 | The system shall automatically create a contract and work orders when a deal is marked "Won". | High     |
+| FR3 | The system shall allow users to process payments via Flutterwave. | High     |
+| FR4 | The system shall allow users to view and update work orders offline. | Medium   |
+
+### 6.2. Non-Functional Requirements
+
+| ID  | Category     | Description                                                                 |
+| NFR1| Performance  | API response times shall be under 200ms for the 95th percentile.            |
+| NFR2| Reliability  | The system shall achieve 99.9% uptime for core services.                    |
+| NFR3| Security     | All user passwords shall be hashed using bcrypt.                            |
+| NFR4| Usability    | The PWA shall achieve a Lighthouse score of >90 on performance and accessibility. |
+
+---
+
+## 7. Testing Strategy
+
+### 7.1. Testing Levels
+
+A multi-layered testing approach will be used to ensure reliability across all services.
+
+| Testing Level          | Scope                                       | Python (Django) Services      | Python (FastAPI) Services | Frontend                 | Target Coverage     |
+| Unit Testing           | Individual functions, methods, classes      | pytest + pytest-django        | pytest + HTTPX            | Jest + React Testing Lib | > 80%               |
+| Integration Testing    | Service endpoints, DB interactions, external calls | pytest + DRF APIClient      | pytest + Async HTTPX      | Cypress                  | Critical Paths      |
+| End-to-End (E2E)       | Complete user flows across frontend and backend | Cypress (frontend-driven)   | Cypress (frontend-driven) | Cypress                  | Core User Journeys  |
+| Performance Testing    | System load, scalability, responsiveness    | k6                            | k6                        | k6                       | NFR Benchmarks      |
+
+### 7.2. Key Test Scenarios
+
+1.  CRM-CMMS Integration Test: Verify that a `deal.closed` event results in a correct contract and work order.
+2.  Offline Sync Test: Verify that data created offline is correctly synced and conflict resolution works.
+3.  Payment Webhook Test: Verify that payment statuses are correctly updated when a Flutterwave webhook is received.
+
+---
+
+## 8. Deployment & DevOps
+
+- Infrastructure: All services will be containerized with Docker and orchestrated with Kubernetes.
+- CI/CD: GitHub Actions will be used for automated testing and deployment to staging and production environments.
+- Monitoring: Prometheus and Grafana will be set up for metrics. Sentry will be used for error tracking.
+- Logging: Structured JSON logs will be collected and centralized in the ELK Stack.

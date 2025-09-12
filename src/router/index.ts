@@ -2,9 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegionView from '@/views/RegionView.vue'
+import SiteView from '@/views/SiteView.vue'
 import VendorView from '@/views/VendorView.vue'
 import ManufacturerView from '@/views/ManufacturerView.vue'
+import ZoneView from '@/views/ZoneView.vue'
 import { useAuthStore } from '@/stores/auth'
+import SystemView from '@/views/SystemView.vue'
+ // Adjust the path as necessary
 
 const routes = [
   {
@@ -26,6 +30,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: "/sites",
+    name: "Sites",
+    component: SiteView,
+    meta: { requiresAuth: true }
+  },
+   {
+    path: "/zones",
+    name: "Zones & Spaces",
+    component: ZoneView,
+    meta: { requiresAuth: true }
+  },
+  {
     path: "/vendors",
     name: "Vendors",
     component: VendorView,
@@ -35,6 +51,12 @@ const routes = [
     path: "/manufacturers",
     name: "Manufacturers",
     component: ManufacturerView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/systems",
+    name: "Systems",
+    component: SystemView,
     meta: { requiresAuth: true }
   }
 ]
