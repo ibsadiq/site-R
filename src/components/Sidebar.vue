@@ -89,7 +89,7 @@ const data = {
         },
         {
           title: 'Models',
-          url: '#',
+          url: '/models',
         },
         {
           title: 'Assets',

@@ -8,6 +8,7 @@ import ManufacturerView from '@/views/ManufacturerView.vue'
 import ZoneView from '@/views/ZoneView.vue'
 import { useAuthStore } from '@/stores/auth'
 import SystemView from '@/views/SystemView.vue'
+import ModelView from '@/views/ModelView.vue'
  // Adjust the path as necessary
 
 const routes = [
@@ -57,6 +58,12 @@ const routes = [
     path: "/systems",
     name: "Systems",
     component: SystemView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/models",
+    name: "Models",
+    component: ModelView,
     meta: { requiresAuth: true }
   }
 ]

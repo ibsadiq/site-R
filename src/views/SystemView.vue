@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { Edit, Trash, Loader2, Eye, Building2, Box, Cog, Blocks} from 'lucide-vue-next';
+import { Edit, Trash, Loader2, Cog, Blocks} from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogScrollContent, DialogTrigger, DialogContent,
@@ -10,7 +10,6 @@ import ListItems from '@/components/ListItems.vue';
 import axiosInstance from "@/utils/axiosInstance"
 import {formatDate} from '@/utils/formatDate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import SystemForm from '@/components/system/SystemForm.vue';
 
 interface Asset {

@@ -1,45 +1,48 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { Edit, Trash, Loader2, Cog, Blocks} from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogScrollContent, DialogTrigger, DialogContent,
   DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose
 } from '@/components/ui/dialog';
 import ListItems from '@/components/ListItems.vue';
-import axiosInstance from "@/utils/axiosInstance";
-import { formatDate } from '@/utils/formatDate';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import ManufacturerForm from '@/components/manufacturer/ManufacturerForm.vue';
-import { Button } from '@/components/ui/button';
-import { Edit, Trash, Loader2 } from 'lucide-vue-next';
+import axiosInstance from "@/utils/axiosInstance"
+import {formatDate} from '@/utils/formatDate';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import ModelForm from '@/components/model/ModelForm.vue';
 
-interface Manufacturer {
+interface Model {
   id: number;
   name: string;
-  creation_date?: string;
-  last_update?: string;
+  description: string;
+  manufacturer: number;
+  manufacturer_name: string;
+  creation_date: string;
+  last_update: string;
 }
 
-const manufacturers = ref<Manufacturer[]>([]);
+const models = ref<Model[]>([]);
 const loading = ref(false);
 const isEditDialogOpen = ref(false);
 const isDeleteDialogOpen = ref(false);
 const deleteLoading = ref(false);
-const selectedItem = ref<Manufacturer | null>(null);
+const selectedItem = ref<Model | null>(null);
 
-const fetchManufacturers = async () => {
+const fetchModels = async () => {
   loading.value = true;
   try {
-    const response = await axiosInstance.get('/manufacturers');
-    manufacturers.value = response.data;
+    const response = await axiosInstance.get('/models');
+    models.value = response.data;
   } catch (error) {
-    console.error('Error fetching manufacturers:', error);
+    console.error('Error fetching models:', error);
   } finally {
     loading.value = false;
   }
 };
 
-function handleSelect(manufacturer: Manufacturer) {
-  selectedItem.value = manufacturer;
+function handleSelect(model: Model) {
+  selectedItem.value = model;
 }
 
 function handleEdit() {
@@ -51,7 +54,7 @@ function handleEdit() {
 const handleEditSuccess = async () => {
   isEditDialogOpen.value = false;
   selectedItem.value = null;
-  fetchManufacturers(); // refresh after edit
+  fetchModels(); // refresh after edit
 };
 
 const handleDelete = () => {
@@ -64,50 +67,47 @@ const confirmDelete = async () => {
   if (!selectedItem.value) return;
   deleteLoading.value = true;
   try {
-    await axiosInstance.delete(`/manufacturers/${selectedItem.value.id}`);
-    manufacturers.value = manufacturers.value.filter(m => m.id !== selectedItem.value?.id);
+    await axiosInstance.delete(`/models/${selectedItem.value.id}`);
     isDeleteDialogOpen.value = false;
     selectedItem.value = null;
+    fetchModels(); // refresh after delete
   } catch (error) {
-    console.error('Error deleting manufacturer:', error);
+    console.error('Error deleting model:', error);
   } finally {
     deleteLoading.value = false;
   }
 };
 
 const handleRefresh = () => {
-  fetchManufacturers();
+  fetchModels();
 };
 
 onMounted(() => {
-  fetchManufacturers();
+  fetchModels();
 });
 </script>
 
 <template>
   <ListItems
-    title="Manufacturer"
-    :items="manufacturers"
+    :items="models"
     :loading="loading"
-    :selectedItem="selectedItem"
-    addButtonLabel="New"
-    dialogClass="sm:max-w-[600px]"
+    title="Model"
     @select="handleSelect"
+    :selected-item="selectedItem"
+    addButtonTitle="New"
+    dialogClass="sm:max-w-[600px]"
     @refresh="handleRefresh"
-    :form-component="ManufacturerForm"
-  >
-    <!-- Item slot -->
+    :form-component="ModelForm"
+    >
     <template #item="{ item }">
       <div class="flex items-center justify-between w-full">
         <div class="flex flex-col">
-          <span class="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[200px] md:max-w-[300px]">
-            {{ item.name }}
-          </span>
+          <div class="font-medium">{{ item.name }}</div>
         </div>
       </div>
+      <div class="text-sm text-muted-foreground">{{ item.manufacturer_name }}</div>
     </template>
 
-    <!-- Action slot -->
     <template #action="{ selectedItem: selected }">
       <div class="flex p-1.5 justify-end border-b gap-2 border-default bg-background">
         <!-- Edit -->
@@ -138,7 +138,7 @@ onMounted(() => {
             <DialogHeader>
               <DialogTitle>Confirm Delete</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete the manufacturer "{{ selected?.name }}"? 
+                Are you sure you want to delete the model "{{ selected?.name }}"? 
                 This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
@@ -148,7 +148,7 @@ onMounted(() => {
               </DialogClose>
               <Button variant="destructive" @click="confirmDelete" :disabled="deleteLoading">
                 <Loader2 v-if="deleteLoading" class="w-4 h-4 mr-2 animate-spin" />
-                Delete Manufacturer
+                Delete Model
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -156,8 +156,7 @@ onMounted(() => {
       </div>
     </template>
 
-    <!-- Detail slot -->
-    <template #detail="{ item }">
+     <template #detail="{ item }">
       <div v-if="item" class="flex flex-col gap-6 p-6">
         <Card>
           <CardHeader>
@@ -165,6 +164,18 @@ onMounted(() => {
   
           </CardHeader>
           <CardContent class="space-y-2">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Name</label>
+                <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ item.name }}</p>
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Manufacturer</label>
+                <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ item.manufacturer }}</p>
+              </div>
+            </div>
+
             <p><strong>Created:</strong> {{ item.creation_date ? formatDate(item.creation_date) : 'N/A' }}</p>
             <p><strong>Last Update:</strong> {{ item.last_update ? formatDate(item.last_update) : 'N/A' }}</p>
           </CardContent>
@@ -172,4 +183,5 @@ onMounted(() => {
       </div>
     </template>
   </ListItems>
+
 </template>
